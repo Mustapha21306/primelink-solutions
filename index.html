@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PrimeLink Solutions</title>
+<style>
+body{margin:0;font-family:Arial,sans-serif;background:#f4f4f4;color:#333;}
+header{padding:30px;text-align:center;background:linear-gradient(135deg,#0a3d62,#3c6382);color:white;}
+.ad-box{background:#f2f2f2;color:#555;text-align:center;padding:20px;margin:15px auto;max-width:728px;border-radius:10px;font-size:14px;}
+main{display:flex;flex-wrap:wrap;justify-content:center;padding:20px;}
+.card{background:white;width:280px;margin:15px;padding:15px;border-radius:15px;box-shadow:0 10px 20px rgba(0,0,0,.25);position:relative;}
+.card img{width:100%;border-radius:10px;margin-top:8px;}
+.ribbon{position:absolute;top:10px;left:-5px;background:#e67e22;color:white;padding:5px 10px;font-size:12px;border-radius:3px;}
+section{background:white;max-width:420px;margin:20px auto;padding:20px;border-radius:15px;}
+input,textarea{width:100%;padding:10px;margin-top:10px;border-radius:6px;border:1px solid #ccc;font-size:16px;}
+button{width:100%;padding:10px;margin-top:10px;border:none;border-radius:6px;background:#0a3d62;color:white;cursor:pointer;}
+button.logout{background:#777;}
+button.danger{background:#c0392b;}
+.hidden{display:none;}
+#preview{margin-top:10px;padding:10px;border:2px dashed #3498db;border-radius:8px;}
+.message{border:1px solid #ccc;padding:10px;margin-top:10px;border-radius:8px;}
+footer{text-align:center;color:white;padding:15px;}
+.whatsapp{position:fixed;bottom:20px;right:20px;background:#25D366;color:white;padding:15px;border-radius:50%;font-size:22px;text-decoration:none;}
+</style>
+</head>
+<body>
+
+<header>
+<h1>PrimeLink Solutions</h1>
+<p>Professional Services You Can Trust</p>
+</header>
+
+<!-- AD PLACEHOLDER -->
+<div class="ad-box">Advertisement</div>
+
+<!-- VISITOR CARDS -->
+<main id="cards"></main>
+
+<!-- CONTACT FORM (CUSTOMERS) -->
+<section id="contact">
+<h2>Contact Us</h2>
+<input id="custName" placeholder="Your Name">
+<textarea id="custMsg" placeholder="Your Message"></textarea>
+<button onclick="sendMessage()">Send Message</button>
+</section>
+
+<!-- REGISTER -->
+<section id="registerSection">
+<h2>Owner Registration</h2>
+<input type="text" id="regUsername" placeholder="Enter username">
+<input type="password" id="regPassword" placeholder="Enter password">
+<button onclick="registerOwner()">Register</button>
+<p>Already registered? <a href="#" onclick="showLogin()">Login here</a></p>
+</section>
+
+<!-- LOGIN -->
+<section id="loginSection" class="hidden">
+<h2>Owner Login</h2>
+<input type="text" id="loginUsername" placeholder="Enter username">
+<input type="password" id="loginPassword" placeholder="Enter password">
+<button onclick="loginOwner()">Login</button>
+<p>New owner? <a href="#" onclick="showRegister()">Register here</a></p>
+</section>
+
+<!-- DASHBOARD -->
+<section id="dashboard" class="hidden">
+<h2>Owner Dashboard</h2>
+<p>Welcome, <span id="ownerName"></span>!</p>
+
+<h3>Add / Edit Service Card</h3>
+<input id="title" placeholder="Service Title">
+<textarea id="desc" placeholder="Description"></textarea>
+<input type="file" id="img">
+<button onclick="saveCard()">Save Card</button>
+<button class="logout" onclick="logoutOwner()">Logout</button>
+
+<div id="preview">Live Preview</div>
+
+<hr>
+<h3>Customer Messages</h3>
+<div id="messagesBox">No messages yet</div>
+</section>
+
+<!-- ABOUT PAGE -->
+<section>
+<h2>About Us</h2>
+<p>PrimeLink Solutions provides professional digital and technical services to individuals and businesses. Our goal is to deliver quality, trust, and reliable solutions.</p>
+</section>
+
+<!-- PRIVACY PAGE -->
+<section>
+<h2>Privacy Policy</h2>
+<p>We respect your privacy. Any information provided on this website is kept private and is not shared with third parties. This website may display advertisements from trusted providers such as Google AdSense.</p>
+</section>
+
+<footer>© 2026 PrimeLink Solutions</footer>
+
+<!-- WHATSAPP BUTTON -->
+<a class="whatsapp" href="https://wa.me/234XXXXXXXXXX" target="_blank">💬</a>
+
+<script>
+// ---------------- DATA ----------------
+let owners = JSON.parse(localStorage.getItem("ownersData")) || [];
+let cards = JSON.parse(localStorage.getItem("cards")) || [];
+let messages = JSON.parse(localStorage.getItem("messages")) || [];
+let loggedOwner = localStorage.getItem("loggedOwner");
+let editIndex = -1;
+let lastMessageTime = 0;
+
+// DOM Elements
+const registerSection = document.getElementById("registerSection");
+const loginSection = document.getElementById("loginSection");
+const dashboard = document.getElementById("dashboard");
+const ownerName = document.getElementById("ownerName");
+
+const regUsername = document.getElementById("regUsername");
+const regPassword = document.getElementById("regPassword");
+const loginUsername = document.getElementById("loginUsername");
+const loginPassword = document.getElementById("loginPassword");
+
+const title = document.getElementById("title");
+const desc = document.getElementById("desc");
+const img = document.getElementById("img");
+
+const cardsDiv = document.getElementById("cards");
+const custName = document.getElementById("custName");
+const custMsg = document.getElementById("custMsg");
+const messagesBox = document.getElementById("messagesBox");
+const preview = document.getElementById("preview");
+
+// ---------------- INIT ----------------
+(function(){ if(loggedOwner) showDashboard(); renderCards(); })();
+
+// ---------------- HELPERS ----------------
+function hashPassword(password){
+  let hash=0;
+  for(let i=0;i<password.length;i++){hash=((hash<<5)-hash)+password.charCodeAt(i);hash|=0;}
+  return hash.toString();
+}
+
+// ---------------- REGISTER / LOGIN ----------------
+function registerOwner(){
+  const u = regUsername.value.trim();
+  const p = regPassword.value.trim();
+  if(!u || !p){alert("Enter username and password");return;}
+  if(owners.find(o=>o.username===u)){alert("Username exists");return;}
+  owners.push({username:u,password:hashPassword(p)});
+  localStorage.setItem("ownersData",JSON.stringify(owners));
+  alert("Registration successful! Login now.");
+  showLogin();
+}
+
+function loginOwner(){
+  const u = loginUsername.value.trim();
+  const p = loginPassword.value.trim();
+  const owner = owners.find(o=>o.username===u && o.password===hashPassword(p));
+  if(owner){loggedOwner=u; localStorage.setItem("loggedOwner",loggedOwner); showDashboard();}
+  else alert("Invalid username or password");
+}
+
+function logoutOwner(){ loggedOwner=null; localStorage.removeItem("loggedOwner"); dashboard.classList.add("hidden"); showLogin(); renderCards(); }
+
+function showDashboard(){
+  if(!loggedOwner){alert("Unauthorized"); showLogin(); return;}
+  registerSection.classList.add("hidden"); loginSection.classList.add("hidden"); dashboard.classList.remove("hidden");
+  ownerName.innerText=loggedOwner; renderMessages();
+}
+
+function showLogin(){ registerSection.classList.add("hidden"); loginSection.classList.remove("hidden"); dashboard.classList.add("hidden"); }
+function showRegister(){ loginSection.classList.add("hidden"); registerSection.classList.remove("hidden"); dashboard.classList.add("hidden"); }
+
+// ---------------- CARD CRUD ----------------
+function saveCard(){
+  if(!title.value||!desc.value){alert("Fill all fields"); return;}
+  const f = img.files[0];
+  if(f){const reader = new FileReader(); reader.onload=e=>storeCard(e.target.result); reader.readAsDataURL(f);}
+  else storeCard(editIndex>-1?cards[editIndex].image:"");
+}
+
+function storeCard(image){
+  const card={title:title.value,desc:desc.value,image,owner:loggedOwner};
+  editIndex>-1 ? cards[editIndex]=card : cards.push(card);
+  localStorage.setItem("cards",JSON.stringify(cards));
+  editIndex=-1; clearForm(); renderCards();
+}
+
+function editCard(i){
+  if(cards[i].owner!==loggedOwner){alert("Not allowed"); return;}
+  editIndex=i; title.value=cards[i].title; desc.value=cards[i].desc; showDashboard();
+}
+
+function deleteCard(i){
+  if(cards[i].owner!==loggedOwner){alert("Not allowed"); return;}
+  if(confirm("Delete this card?")){ cards.splice(i,1); localStorage.setItem("cards",JSON.stringify(cards)); renderCards();}
+}
+
+function clearForm(){ title.value=""; desc.value=""; img.value=""; preview.innerHTML="Live Preview"; }
+
+function renderCards(){
+  cardsDiv.innerHTML="";
+  cards.forEach((c,i)=>{
+    const d = document.createElement("div"); d.className="card";
+    d.innerHTML=`
+    ${c.owner===loggedOwner?'<div class="ribbon">Your Card</div>':''}
+    <h3>${c.title}</h3><p>${c.desc}</p>
+    ${c.image?`<img src="${c.image}">`:''}
+    ${c.owner===loggedOwner?`<button onclick="editCard(${i})">Edit</button><button class="danger" onclick="deleteCard(${i})">Delete</button>`:''}`;
+    cardsDiv.appendChild(d);
+  });
+}
+
+// ---------------- CUSTOMER MESSAGES ----------------
+function sendMessage(){
+  const now = Date.now();
+  if(now - lastMessageTime < 15000){alert("Wait 15s before sending another"); return;}
+  if(!custName.value || !custMsg.value){alert("Fill all fields"); return;}
+  messages.push({name:custName.value,msg:custMsg.value,time:new Date().toLocaleString()});
+  localStorage.setItem("messages",JSON.stringify(messages));
+  lastMessageTime=now;
+  custName.value=""; custMsg.value=""; alert("Message sent!");
+  if(loggedOwner) renderMessages();
+}
+
+function renderMessages(){
+  messagesBox.innerHTML="";
+  if(messages.length===0){messagesBox.innerText="No messages yet"; return;}
+  messages.forEach((m,i)=>{
+    messagesBox.innerHTML+=`<div class="message"><strong>${m.name}</strong><br><small>${m.time}</small><p>${m.msg}</p>
+    <button class="danger" onclick="deleteMessage(${i})">Delete</button></div>`;
+  });
+}
+
+function deleteMessage(i){ messages.splice(i,1); localStorage.setItem("messages",JSON.stringify(messages)); renderMessages(); }
+
+</script>
+</body>
+</html>
